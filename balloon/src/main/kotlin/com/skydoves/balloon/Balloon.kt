@@ -25,12 +25,16 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
@@ -546,10 +550,137 @@ public class Balloon private constructor(
       alpha = builder.alpha
       radius = builder.cornerRadius
       ViewCompat.setElevation(this, builder.elevation)
-      background = builder.backgroundDrawable ?: GradientDrawable().apply {
-        setColor(builder.backgroundColor)
-        cornerRadius = builder.cornerRadius
+//      background = builder.backgroundDrawable ?: GradientDrawable().apply {
+//        setColor(builder.backgroundColor)
+//        cornerRadius = builder.cornerRadius
+//        setStroke(2, Color.RED)
+//      }
+
+//      background = object : GradientDrawable() {
+//        override fun draw(canvas: Canvas) {
+//          // Draw the original background color with corner radius
+//          val paintBackground = Paint().apply {
+//            color = builder.backgroundColor // Original background color
+//            style = Paint.Style.FILL
+//          }
+//
+//          // Create rounded rectangle for background
+//          val rectF = RectF(0f, 0f, width.toFloat(), height.toFloat())
+//          canvas.drawRoundRect(rectF, builder.cornerRadius, builder.cornerRadius, paintBackground)
+//
+//          // Calculate arrow's boundaries
+//          val arrowWidth = builder.arrowSize
+//          val arrowPosition = builder.arrowPosition // Position (e.g., center)
+//          val startX = (width * arrowPosition - arrowWidth / 2).toInt()
+//          val endX = (width * arrowPosition + arrowWidth / 2).toInt()
+//
+//          // Draw the border excluding the arrow region
+//          val paintBorder = Paint().apply {
+//            color = Color.RED // Border color
+//            style = Paint.Style.STROKE
+//            strokeWidth = 4f // Border width
+//          }
+//
+//          // Create path for border
+//          val borderPath = Path().apply {
+//            // Add the rounded rectangle for the full border
+//            addRoundRect(rectF, builder.cornerRadius, builder.cornerRadius, Path.Direction.CW)
+//
+//            // Cut out the arrow area from the top side
+//            // Skip the arrow region at the top
+//            moveTo(0f, 0f)
+//            lineTo(startX.toFloat(), 0f)  // Start at the left
+//            moveTo(endX.toFloat(), 0f)    // Move to the right side of the arrow
+//            lineTo(width.toFloat(), 0f)   // Finish the top side at the right
+//
+//            // Draw the rest of the border normally
+//            lineTo(width.toFloat(), height.toFloat())
+//            lineTo(0f, height.toFloat())
+//            close()
+//          }
+//
+//          // Draw the border path
+//          canvas.drawPath(borderPath, paintBorder)
+//        }
+//      }
+
+      background = object : Drawable() {
+
+        override fun draw(canvas: Canvas) {
+          // Step 1: Draw the balloon background (with rounded corners and border)
+          val paintBackground = Paint().apply {
+            color = builder.backgroundColor // Original background color
+            style = Paint.Style.FILL
+          }
+
+          // Draw the rounded rectangle for the balloon body
+          canvas.drawRoundRect(
+            0f, 0f, width.toFloat(), height.toFloat(),
+            builder.cornerRadius, builder.cornerRadius, paintBackground
+          )
+
+          // Step 2: Calculate the arrow's boundaries
+          val arrowWidth = builder.arrowSize
+          val arrowHeight =builder.arrowSize * 0.5f
+          val arrowPosition = builder.arrowPosition // Position (e.g., center)
+          val startX = (width * arrowPosition - arrowWidth / 2).toInt()
+          val endX = (width * arrowPosition + arrowWidth / 2).toInt()
+          val arrowTopY = height // Positioning the arrow at the bottom of the balloon
+
+          // Step 3: Draw the arrow (triangle shape)
+          val paintArrow = Paint().apply {
+            color = builder.backgroundColor // Arrow color same as background
+            style = Paint.Style.FILL
+          }
+
+          val arrowPath = Path().apply {
+            moveTo(startX.toFloat(), arrowTopY.toFloat())  // Left point of the arrow
+            lineTo(endX.toFloat(), arrowTopY.toFloat())    // Right point of the arrow
+            lineTo((width / 2).toFloat(), (arrowTopY + arrowHeight).toFloat())  // Bottom point of the arrow
+            close()
+          }
+
+          canvas.drawPath(arrowPath, paintArrow)
+
+          // Step 4: Draw the border (excluding the arrow area)
+          val paintBorder = Paint().apply {
+            color = Color.RED // Border color
+            style = Paint.Style.STROKE
+            strokeWidth = 4f // Border width
+          }
+
+          val borderPath = Path().apply {
+            // Draw the top-left border
+            moveTo(0f, 0f)
+            lineTo(startX.toFloat(), 0f) // Stop at the start of the arrow
+            lineTo(endX.toFloat(), 0f)   // Start after the arrow
+            lineTo(width.toFloat(), 0f)
+
+            // Draw right side border
+            lineTo(width.toFloat(), height.toFloat())
+
+            // Draw bottom-right border
+            lineTo(0f, height.toFloat())
+
+            // Close the path to draw the top-left border
+            lineTo(0f, 0f)
+          }
+          canvas.drawPath(borderPath, paintBorder)
+        }
+
+        override fun setAlpha(alpha: Int) {
+          // Implement if necessary
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+          // Implement if necessary
+        }
+
+        override fun getOpacity(): Int {
+          return PixelFormat.OPAQUE
+        }
       }
+
       setPadding(
         builder.paddingLeft,
         builder.paddingTop,
